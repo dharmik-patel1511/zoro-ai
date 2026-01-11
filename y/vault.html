@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zoro AI – Vault Module</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --zoro-indigo:#6366f1;
+  --zoro-cyan:#22d3ee;
+  --zoro-emerald:#10b981;
+}
+
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(99,102,241,.18), transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(34,211,238,.15), transparent 45%),
+    #020617;
+  color:#f8fafc;
+  min-height:100vh;
+  padding:2rem;
+}
+
+.glass-panel{
+  background:rgba(30,41,59,.45);
+  backdrop-filter:blur(22px);
+  border-radius:2.5rem;
+  position:relative;
+  overflow:hidden;
+}
+
+.glass-panel::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  padding:1px;
+  border-radius:inherit;
+  background:linear-gradient(135deg,
+    transparent 25%,
+    rgba(99,102,241,.8),
+    rgba(34,211,238,.8),
+    transparent 75%);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  pointer-events:none;
+}
+
+.goal-input{
+  width:100%;
+  padding:1rem 1.2rem;
+  border-radius:1.25rem;
+  background:rgba(2,6,23,.7);
+  border:1px solid rgba(255,255,255,.08);
+  color:white;
+}
+
+.goal-input::placeholder{color:rgba(255,255,255,.4);}
+
+.btn-primary{
+  background:linear-gradient(135deg,#fff,#e5e7eb);
+  color:#020617;
+  font-weight:900;
+  padding:1rem;
+  border-radius:1.25rem;
+}
+
+.btn-secondary{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.15);
+  padding:1rem;
+  border-radius:1.25rem;
+  font-weight:800;
+}
+
+.pill{
+  padding:.35rem .8rem;
+  font-size:11px;
+  font-weight:900;
+  border-radius:999px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.15);
+}
+
+#vault-history::-webkit-scrollbar{width:4px;}
+#vault-history::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,.15);
+  border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<main class="max-w-7xl mx-auto">
+  <h1 class="text-4xl font-black mb-12 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+    ZORO AI — VAULT
+  </h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+    <!-- LEFT -->
+    <div class="lg:col-span-5 space-y-6">
+
+      <div class="glass-panel p-10">
+        <div class="flex justify-between mb-4">
+          <h2 class="text-2xl font-black">Vault Protocol</h2>
+          <span class="pill text-emerald-300">HISTORY MODE</span>
+        </div>
+        <p class="text-slate-300 text-sm">
+          Data is stored locally. Each save creates a permanent record.
+        </p>
+      </div>
+
+      <div class="glass-panel p-10">
+        <h3 class="font-black mb-6">Secure Profile Input</h3>
+
+        <div class="space-y-4">
+          <input id="vault-name" class="goal-input" placeholder="Full Name">
+          <input id="vault-email" class="goal-input" placeholder="Email">
+          <input id="vault-phone" class="goal-input" placeholder="Phone">
+          <input id="vault-income" type="number" class="goal-input" placeholder="Monthly Income">
+          <textarea id="vault-notes" class="goal-input h-28 resize-none" placeholder="Private Notes"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-6">
+          <button onclick="saveVault()" class="btn-primary">Save to Vault</button>
+          <button onclick="clearVault()" class="btn-secondary">Clear All</button>
+        </div>
+
+        <p id="vault-ai" class="mt-6 text-xs italic text-indigo-300">
+          Vault ready.
+        </p>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="lg:col-span-7">
+      <div class="glass-panel p-10">
+        <h3 class="text-xl font-black mb-6">Vault History</h3>
+        <div id="vault-history" class="space-y-4 max-h-[520px] overflow-y-auto"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const VAULT_KEY="zoroai_vault_history_v1";
+const $=id=>document.getElementById(id);
+
+function getHistory(){
+  return JSON.parse(localStorage.getItem(VAULT_KEY)||"[]");
+}
+
+function setHistory(data){
+  localStorage.setItem(VAULT_KEY,JSON.stringify(data));
+}
+
+function saveVault(){
+  const entry={
+    id:crypto.randomUUID(),
+    name:$("vault-name").value.trim(),
+    email:$("vault-email").value.trim(),
+    phone:$("vault-phone").value.trim(),
+    income:$("vault-income").value.trim(),
+    notes:$("vault-notes").value.trim(),
+    savedAt:new Date().toISOString()
+  };
+
+  if(!entry.name || !entry.email){
+    $("vault-ai").innerText="Name & Email are required.";
+    return;
+  }
+
+  const history=getHistory();
+  history.unshift(entry);
+  setHistory(history);
+
+  $("vault-ai").innerText="Saved successfully. History updated.";
+  loadVaultHistory();
+  clearForm();
+}
+
+function loadVaultHistory(){
+  const box=$("vault-history");
+  const history=getHistory();
+
+  if(!history.length){
+    box.innerHTML="<p class='text-slate-400 text-sm'>No records yet.</p>";
+    return;
+  }
+
+  box.innerHTML=history.map(h=>`
+    <div class="p-6 bg-white/5 border border-white/10 rounded-3xl">
+      <p class="font-bold">${escapeHTML(h.name)}</p>
+      <p class="text-xs text-slate-400">${escapeHTML(h.email)}</p>
+      <p class="text-xs text-slate-500 mt-1">${new Date(h.savedAt).toLocaleString()}</p>
+    </div>
+  `).join("");
+}
+
+function clearVault(){
+  localStorage.removeItem(VAULT_KEY);
+  $("vault-ai").innerText="Vault cleared.";
+  loadVaultHistory();
+}
+
+function clearForm(){
+  ["vault-name","vault-email","vault-phone","vault-income","vault-notes"]
+    .forEach(id=>$(id).value="");
+}
+
+function escapeHTML(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+
+loadVaultHistory();
+</script>
+
+</body>
+</html>
